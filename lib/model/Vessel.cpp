@@ -2,6 +2,7 @@
 
 Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &_output, &_setpoint, _kp, _ki, _kd, DIRECT)
 {
+  _id = id;
   _input = 0;
   _setpoint = 0;
   _output = 0;
@@ -9,6 +10,7 @@ Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid
   _at = false;
   _windowSize = 2000;
   _tempSensor.begin(MAX31865_4WIRE);
+  _tempReady = false;
 
   readConfigFromFlash();
 }
@@ -18,7 +20,6 @@ Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid
  */
 void Vessel::compute()
 {
-  _tempSensor.readRTD();
 
   // Log fault states
   uint8_t fault = _tempSensor.readFault();
@@ -28,7 +29,16 @@ void Vessel::compute()
     Serial.println(fault, HEX);
   }
 
-  _input = _tempSensor.temperature(100.0, 430.0);
+  _tempReady= _tempSensor.readRTDAsync(_rtdReg);
+  if (_tempReady)
+  {
+    _input = _tempSensor.temperatureAsync(_rtdReg, 100.0, 430.0);
+    Serial.print(_id);
+    Serial.print(" ");
+    Serial.print(_input, 4);
+    Serial.print("\t");
+  }
+
   _pid.Compute();
 }
 
@@ -81,12 +91,14 @@ void Vessel::writeConfigToFlash()
 
       unsigned int writeSize;
 
-      writeSize = f.write((byte*) &_pidConfig, sizeof(_pidConfig));
+      writeSize = f.write((byte *)&_pidConfig, sizeof(_pidConfig));
 
       if (writeSize != sizeof(_pidConfig))
       {
         Serial.println(F("Write size mismatch for Vessel ") + idStr + F(" configuration"));
-      } else {
+      }
+      else
+      {
         Serial.println(F("Config for Vessel ") + idStr + F(" saved to FS successfully"));
       }
     }

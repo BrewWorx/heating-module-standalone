@@ -30,7 +30,7 @@ public:
     void readConfigFromFlash();
 
 private:
-    unsigned int _id;
+    unsigned short int _id;
 
     double _setpoint;
     double _input;
@@ -43,10 +43,13 @@ private:
     bool _at;
     bool _active;
 
-    int _windowSize; // 2000
+    int _windowSize;
     unsigned long _windowStartTime;
 
     Adafruit_MAX31865 _tempSensor;
+    bool _tempReady;
+    uint16_t _rtdReg;
+
     PID _pid;
 
     PidConfig _pidConfig;
