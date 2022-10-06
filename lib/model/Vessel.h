@@ -3,6 +3,7 @@
 
 #include <Adafruit_MAX31865.h>
 #include <PID_v1.h>
+#include <PID_AutoTune_v0.h>
 #include <LittleFS.h>
 
 struct PidConfig
@@ -15,13 +16,13 @@ struct PidConfig
 class Vessel
 {
 public:
-    // Constructor
+    // Constructors
     Vessel(unsigned int id, int cs_pin);
+    Vessel(unsigned int id, int cs_pin, double* secondaryInput, bool* secondaryAt);
 
     // Setters
     void setTemperature(double temp) { _setpoint = temp; }
     void setHeating(bool heating) { _active = heating; }
-    void setAutotune(bool at) { _at = at; }
 
     void compute();
 
@@ -29,19 +30,19 @@ public:
 
     void readConfigFromFlash();
 
+    double output;                                                                          // PID output, 0-1
+    bool at;                                                                                // Auto tune enabled
 private:
     unsigned short int _id;
 
     double _setpoint;
     double _input;
-    double _output;
-
-    double _kp;
-    double _ki;
-    double _kd;
-
-    bool _at;
+    
     bool _active;
+
+    double _secondaryOutput;
+    bool _secondaryAt;
+    
 
     int _windowSize;
     unsigned long _windowStartTime;
@@ -51,9 +52,8 @@ private:
     uint16_t _rtdReg;
 
     PID _pid;
-
     PidConfig _pidConfig;
-
+    PID_ATune _aTune;
 
     void writeConfigToFlash();
 };

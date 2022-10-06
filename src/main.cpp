@@ -22,9 +22,9 @@ long lastReconnectAttempt = 0;
 // Async RTD registry
 uint16_t rtdRegistry[3];
 
-Vessel hlt(0, 12); // Hot Liquor Tank
-Vessel mlt(1, 14); // Mash / Lauter Tun
-Vessel bk(2, 16);  // Boil Kettle
+Vessel mlt(1, 14);                       // Mash / Lauter Tun
+Vessel hlt(0, 12, &mlt.output, &mlt.at); // Hot Liquor Tank
+Vessel bk(2, 16);                        // Boil Kettle
 
 // MQTT Message handler method
 void handleMessage(char *topic, byte *payload, unsigned int length)

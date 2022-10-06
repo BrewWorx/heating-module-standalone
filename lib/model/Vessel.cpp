@@ -1,16 +1,35 @@
 #include "Vessel.h"
 
-Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &_output, &_setpoint, _kp, _ki, _kd, DIRECT)
+Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &output, &_setpoint, _pidConfig.kp, _pidConfig.ki, _pidConfig.kd, DIRECT), _aTune(&_input, &output)
 {
   _id = id;
   _input = 0;
   _setpoint = 0;
-  _output = 0;
   _active = false;
-  _at = false;
   _windowSize = 2000;
   _tempSensor.begin(MAX31865_4WIRE);
   _tempReady = false;
+
+  output = 0;
+  at = false;
+
+  readConfigFromFlash();
+}
+
+Vessel::Vessel(unsigned int id, int cs_pin, double *secondaryInput, bool *secondaryAt) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &output, &_setpoint, _pidConfig.kp, _pidConfig.ki, _pidConfig.kd, DIRECT), _aTune(&_input, &output)
+{
+  _id = id;
+  _input = 0;
+  _setpoint = 0;
+  _active = false;
+  _windowSize = 2000;
+  _tempSensor.begin(MAX31865_4WIRE);
+  _tempReady = false;
+
+  output = 0;
+  at = false;
+
+  _secondaryAt = secondaryAt;
 
   readConfigFromFlash();
 }
@@ -20,7 +39,6 @@ Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid
  */
 void Vessel::compute()
 {
-
   // Log fault states
   uint8_t fault = _tempSensor.readFault();
   if (fault)
@@ -29,19 +47,40 @@ void Vessel::compute()
     Serial.println(fault, HEX);
   }
 
-  _tempReady= _tempSensor.readRTDAsync(_rtdReg);
-  if (_tempReady)
+  if (_secondaryAt)
   {
-    _input = _tempSensor.temperatureAsync(_rtdReg, 100.0, 430.0);
-    Serial.print(_id);
-    Serial.print(" ");
-    Serial.print(_input, 4);
-    Serial.print("\t");
+    at = false;
+    _input = _secondaryOutput * 100; // Output of secondary vessel PID * 100 (celcius, maximum water temperature)
+  }
+  else
+  {
+    _secondaryAt = false;
+    _tempReady = _tempSensor.readRTDAsync(_rtdReg);
+    if (_tempReady)
+    {
+      _input = _tempSensor.temperatureAsync(_rtdReg, 100.0, 430.0);
+    }
   }
 
-  _pid.Compute();
+  if (at) {
+    if (_aTune.Runtime() != 0)
+      {
+        at = false;
+        _pidConfig.kp = _aTune.GetKp();
+        _pidConfig.ki = _aTune.GetKi();
+        _pidConfig.kd = _aTune.GetKd();
+        _pid.SetTunings(_pidConfig.kp, _pidConfig.ki, _pidConfig.kd);
+
+        //AutoTuneHelper(false, hltPID);
+      }
+  } else {
+    _pid.Compute();
+  }
 }
 
+/**
+ * Read vessel configuration from Flash memory
+ */
 void Vessel::readConfigFromFlash()
 {
   if (LittleFS.begin())
@@ -72,6 +111,9 @@ void Vessel::readConfigFromFlash()
   }
 }
 
+/**
+ * Write vessel configuration to Flash memory
+ */
 void Vessel::writeConfigToFlash()
 {
   if (LittleFS.begin())
