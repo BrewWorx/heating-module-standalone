@@ -6,15 +6,24 @@
 
 // Internal dependencies
 #include <Vessel.h>
+#include <MessageService.h>
 
 // Wireless Network Credentials
 const char *ssid = "*";
-const char *password = "********";
+const char *wifiPassword = "********";
 
 WiFiEventHandler gotIpEventHandler, disconnectedEventHandler;
 WiFiClient wifiClient;
 
-PubSubClient mqClient(wifiClient);
+PubSubClient mqClient(wifiClient); // Obsolete, will be implemented in MessageService
+
+const char username[] = "user";
+const char password[] = "password";
+const char serverUrl[] = "serverUrl";
+const char rootInTopic[] = "inTopic";
+const char rootOutTopic[] ="outTopic";
+
+MessageService msgService(wifiClient, serverUrl, username, password, rootInTopic, rootOutTopic);
 
 bool ledState;
 long lastReconnectAttempt = 0;
@@ -22,9 +31,9 @@ long lastReconnectAttempt = 0;
 // Async RTD registry
 uint16_t rtdRegistry[3];
 
-Vessel mlt(1, 14);                       // Mash / Lauter Tun
-Vessel hlt(0, 12, &mlt.output, &mlt.at); // Hot Liquor Tank
-Vessel bk(2, 16);                        // Boil Kettle
+Vessel mlt("mlt", 14);                       // Mash / Lauter Tun
+Vessel hlt("hlt", 12, &mlt.output, &mlt.at); // Hot Liquor Tank
+Vessel bk("bk", 16);                        // Boil Kettle
 
 // MQTT Message handler method
 void handleMessage(char *topic, byte *payload, unsigned int length)
@@ -62,19 +71,16 @@ void setup()
                                                             { Serial.println("Station disconnected"); });
 
   Serial.printf("Connecting to %s ...\n", ssid);
-  WiFi.begin(ssid, password);
+  WiFi.begin(ssid, wifiPassword);
 
   mqClient.setServer("raspberrypi", 1883);
   mqClient.setCallback(handleMessage);
 
   lastReconnectAttempt = 0;
-
-  hlt.readConfigFromFlash();
 }
 
 void loop()
 {
-
   if (!mqClient.connected() && WiFi.status() == WL_CONNECTED)
   {
     long now = millis();

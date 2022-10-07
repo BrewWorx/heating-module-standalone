@@ -6,19 +6,15 @@
 #include <PID_AutoTune_v0.h>
 #include <LittleFS.h>
 
-struct PidConfig
-{
-    double kp;
-    double ki;
-    double kd;
-};
+#include "FileSystemService.h"
+#include "PidConfig.h"
 
 class Vessel
 {
 public:
     // Constructors
-    Vessel(unsigned int id, int cs_pin);
-    Vessel(unsigned int id, int cs_pin, double* secondaryInput, bool* secondaryAt);
+    Vessel(const char *id, int cs_pin);
+    Vessel(const char *id, int cs_pin, double* secondaryInput, bool* secondaryAt);
 
     // Setters
     void setTemperature(double temp) { _setpoint = temp; }
@@ -27,13 +23,11 @@ public:
     void compute();
 
     double getInput() { return _input; }
-
-    void readConfigFromFlash();
-
+    
     double output;                                                                          // PID output, 0-1
     bool at;                                                                                // Auto tune enabled
 private:
-    unsigned short int _id;
+    const char *_id;
 
     double _setpoint;
     double _input;
@@ -54,8 +48,6 @@ private:
     PID _pid;
     PidConfig _pidConfig;
     PID_ATune _aTune;
-
-    void writeConfigToFlash();
 };
 
 #endif

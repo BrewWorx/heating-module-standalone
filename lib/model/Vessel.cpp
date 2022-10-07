@@ -1,6 +1,6 @@
 #include "Vessel.h"
 
-Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &output, &_setpoint, _pidConfig.kp, _pidConfig.ki, _pidConfig.kd, DIRECT), _aTune(&_input, &output)
+Vessel::Vessel(const char *id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &output, &_setpoint, _pidConfig.kp, _pidConfig.ki, _pidConfig.kd, DIRECT), _aTune(&_input, &output)
 {
   _id = id;
   _input = 0;
@@ -12,11 +12,11 @@ Vessel::Vessel(unsigned int id, int cs_pin) : _tempSensor(cs_pin, 0, 4, 5), _pid
 
   output = 0;
   at = false;
+  
+  _pidConfig = FileSystemService::readVesselConfig(_id);
+  }
 
-  readConfigFromFlash();
-}
-
-Vessel::Vessel(unsigned int id, int cs_pin, double *secondaryInput, bool *secondaryAt) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &output, &_setpoint, _pidConfig.kp, _pidConfig.ki, _pidConfig.kd, DIRECT), _aTune(&_input, &output)
+Vessel::Vessel(const char *id, int cs_pin, double *secondaryInput, bool *secondaryAt) : _tempSensor(cs_pin, 0, 4, 5), _pid(&_input, &output, &_setpoint, _pidConfig.kp, _pidConfig.ki, _pidConfig.kd, DIRECT), _aTune(&_input, &output)
 {
   _id = id;
   _input = 0;
@@ -30,8 +30,7 @@ Vessel::Vessel(unsigned int id, int cs_pin, double *secondaryInput, bool *second
   at = false;
 
   _secondaryAt = secondaryAt;
-
-  readConfigFromFlash();
+  _pidConfig = FileSystemService::readVesselConfig(_id);
 }
 
 /**
@@ -75,78 +74,5 @@ void Vessel::compute()
       }
   } else {
     _pid.Compute();
-  }
-}
-
-/**
- * Read vessel configuration from Flash memory
- */
-void Vessel::readConfigFromFlash()
-{
-  if (LittleFS.begin())
-  {
-    String idStr = String(_id);
-
-    File f = LittleFS.open(idStr, "r");
-
-    if (!f)
-    {
-      Serial.println(F("Failed to open configuration file for Vessel ") + idStr + F(" for reading"));
-    }
-    else
-    {
-      unsigned int readSize;
-
-      readSize = f.readBytes((char *)&_pidConfig, sizeof(_pidConfig));
-
-      if (readSize != sizeof(_pidConfig))
-      {
-        Serial.println(F("Read size mismatch for Vessel ") + idStr + F(" configuration"));
-      }
-    }
-  }
-  else
-  {
-    Serial.println(F("Could not mount the file system"));
-  }
-}
-
-/**
- * Write vessel configuration to Flash memory
- */
-void Vessel::writeConfigToFlash()
-{
-  if (LittleFS.begin())
-  {
-    String idStr = String(_id);
-
-    File f = LittleFS.open(idStr, "w");
-
-    if (!f)
-    {
-      Serial.println(F("Failed to open configuration file for Vessel ") + idStr + F(" for writing"));
-    }
-    else
-    {
-
-      Serial.println(F("Saving configuration for Vessel ") + idStr);
-
-      unsigned int writeSize;
-
-      writeSize = f.write((byte *)&_pidConfig, sizeof(_pidConfig));
-
-      if (writeSize != sizeof(_pidConfig))
-      {
-        Serial.println(F("Write size mismatch for Vessel ") + idStr + F(" configuration"));
-      }
-      else
-      {
-        Serial.println(F("Config for Vessel ") + idStr + F(" saved to FS successfully"));
-      }
-    }
-  }
-  else
-  {
-    Serial.println(F("Could not mount the file system"));
   }
 }
