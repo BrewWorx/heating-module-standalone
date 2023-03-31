@@ -8,6 +8,8 @@ MessageService::MessageService(WiFiClient client, const char *serverUrl, const c
     _rootInTopic = rootInTopic;
     _rootOutTopic = rootOutTopic;
 
+    _lastReconnectAttempt = 0;
+
     _mqClient.setServer(serverUrl, 1883);
     _mqClient.setCallback(handleMessage);
 }
@@ -29,4 +31,29 @@ bool MessageService::sendMessage(char *topic, char *payload)
 {
     bool response = _mqClient.publish(topic, payload);
     return response;
+}
+
+void MessageService::loop()
+{
+
+    if (!_mqClient.connected() && WiFi.status() == WL_CONNECTED)
+    {
+        long now = millis();
+        if (now - _lastReconnectAttempt > 5000)
+        {
+            _lastReconnectAttempt = now;
+            Serial.println("Attempting MQTT reconnect...");
+            // Attempt to reconnect
+            if (reconnect())
+            {
+                _lastReconnectAttempt = 0;
+                Serial.println("Connected!");
+            }
+            else
+            {
+                Serial.println("Unable to reconnect :(");
+            }
+        }
+    }
+
 }

@@ -5,6 +5,7 @@
 #include <PID_v1.h>
 #include <PID_AutoTune_v0.h>
 #include <LittleFS.h>
+#include <ArduinoJson.h>
 
 #include "FileSystemService.h"
 #include "PidConfig.h"
@@ -13,33 +14,33 @@ class Vessel
 {
 public:
     // Constructors
-    Vessel(const char *id, int cs_pin);
-    Vessel(const char *id, int cs_pin, double* secondaryInput, bool* secondaryAt);
+    Vessel(int id, int cs_pin, int ssr_pin = 0);
+    // Getters
+    double getInput() { return _input; }
+    DynamicJsonDocument getTelemetry();
 
     // Setters
     void setTemperature(double temp) { _setpoint = temp; }
-    void setHeating(bool heating) { _active = heating; }
 
     void compute();
-
-    double getInput() { return _input; }
-    
-    double output;                                                                          // PID output, 0-1
-    bool at;                                                                                // Auto tune enabled
+    void toggleAutotune(bool atState);
 private:
-    const char *_id;
+    int _id;
+    int _ssr_pin;
 
     double _setpoint;
     double _input;
-    
-    bool _active;
 
-    double _secondaryOutput;
-    bool _secondaryAt;
-    
-
+    double _output; // PID output, 0 - windowSize
     int _windowSize;
     unsigned long _windowStartTime;
+    bool _at;       // Auto tune enabled
+
+    byte _aTuneMode;
+    double _aTuneStep;
+    double _aTuneNoise;
+    double _aTuneStartValue;
+    unsigned int _aTuneLookBack;
 
     Adafruit_MAX31865 _tempSensor;
     bool _tempReady;
@@ -48,6 +49,8 @@ private:
     PID _pid;
     PidConfig _pidConfig;
     PID_ATune _aTune;
+
+    void _completeAutotune();
 };
 
 #endif

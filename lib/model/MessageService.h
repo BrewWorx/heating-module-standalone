@@ -11,7 +11,7 @@ public:
     MessageService(WiFiClient client, const char *serverUrl, const char *username, const char *password, const char *rootInTopic, const char *rootOutTopic);
 
     /**
-     * Sum numbers in a vector.
+     * Send message via MQTT.
      *
      * @param msg Message to send via MQTT.
      * @return Boolean of message delivery status
@@ -23,15 +23,22 @@ public:
 private:
     PubSubClient _mqClient;
 
+
+
+
+    static void handleMessage(char *topic, byte *payload, unsigned int length);
+
+public:
+    void loop();
+
     const char *_serverUrl;
     const char *_username;
     const char *_password;
     const char *_rootInTopic;
     const char *_rootOutTopic;
 
+    long _lastReconnectAttempt;
     bool reconnect();
-
-    static void handleMessage(char *topic, byte *payload, unsigned int length);
 };
 
 #endif

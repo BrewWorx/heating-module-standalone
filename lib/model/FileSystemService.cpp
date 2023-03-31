@@ -1,12 +1,13 @@
 #include "FileSystemService.h"
 
-PidConfig FileSystemService::readVesselConfig(const char *vesselId)
+PidConfig FileSystemService::readVesselConfig(int vesselId)
 {
     PidConfig _pidConfig;
 
     if (LittleFS.begin())
     {
-        File f = LittleFS.open(vesselId, "r");
+        String filename = String(vesselId);
+        File f = LittleFS.open(filename, "r");
 
         if (!f)
         {
@@ -32,13 +33,14 @@ PidConfig FileSystemService::readVesselConfig(const char *vesselId)
     return _pidConfig;
 }
 
-bool FileSystemService::writeVesselConfig(const char *vesselId, PidConfig pidConfig)
+bool FileSystemService::writeVesselConfig(int vesselId, PidConfig pidConfig)
 {
     bool res = false;
 
     if (LittleFS.begin())
     {
-        File f = LittleFS.open(vesselId, "w");
+        String filename = String(vesselId);
+        File f = LittleFS.open(filename, "w");
 
         if (!f)
         {
